@@ -3,7 +3,7 @@ package br.com.nlw.events.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "tbl_subscriptions")
+@Table(name = "tbl_subscription")
 public class Subscription {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
