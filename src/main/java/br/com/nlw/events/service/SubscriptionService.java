@@ -1,5 +1,7 @@
 package br.com.nlw.events.service;
 
+import br.com.nlw.events.dto.SubscriptionRankingByUser;
+import br.com.nlw.events.dto.SubscriptionRankingItem;
 import br.com.nlw.events.dto.SubscriptionResponse;
 import br.com.nlw.events.exception.EventNotFoundException;
 import br.com.nlw.events.exception.SubscriptionConflictException;
@@ -12,6 +14,9 @@ import br.com.nlw.events.repo.SubscriptionRepo;
 import br.com.nlw.events.repo.UserRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.IntStream;
 
 @Service
 public class SubscriptionService {
@@ -37,10 +42,14 @@ public class SubscriptionService {
             userRec = userRepo.save(user);
         }
 
-        User indicador = userRepo.findById(userId).orElse(null);
+        User indicador = null;
 
-        if (indicador == null) {
-            throw new UserIndicadorNotFoundException("Usuário " + userId + "indicador não existe!");
+        if (userId != null) {
+            indicador = userRepo.findById(userId).orElse(null);
+
+            if (indicador == null) {
+                throw new UserIndicadorNotFoundException("Usuário " + userId + "indicador não existe!");
+            }
         }
 
         Subscription sub = new Subscription();
@@ -61,5 +70,32 @@ public class SubscriptionService {
                 res.getEvent().getPrettyName() + "/" +
                 res.getSubscriber().getId()
         );
+    }
+
+    public List<SubscriptionRankingItem> getCompleteRanking(String prettyName) {
+        Event event = eventRepo.findByPrettyName(prettyName);
+
+        if (event == null) {
+            throw new EventNotFoundException("Ranking do evento " + prettyName + " não existe!");
+        }
+
+        return subscriptionRepo.generateRanking(event.getEventId());
+    }
+
+    public SubscriptionRankingByUser getRankingByUser(String prettyName, Integer userId) {
+        List<SubscriptionRankingItem> ranking = getCompleteRanking(prettyName);
+
+        SubscriptionRankingItem item = ranking.stream()
+            .filter(i -> i.usertId().equals(userId)).findFirst().orElse(null);
+
+        if (item == null) {
+            throw new UserIndicadorNotFoundException("Não há inscrições com indicação do usuário " + userId);
+        }
+
+        Integer posicao = IntStream.range(0, ranking.size())
+                .filter(pos -> ranking.get(pos).usertId().equals(userId))
+                .findFirst().getAsInt();
+
+        return new SubscriptionRankingByUser(item, posicao + 1);
     }
 }
